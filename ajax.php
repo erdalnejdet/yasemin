@@ -2,14 +2,18 @@
 // CORS ayarları - EN ÜSTTE olmalı
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Methods: POST, OPTIONS, GET');
+header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
 // OPTIONS preflight request'i için hemen yanıt ver
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+// Debug için (geçici olarak)
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 // Hata raporlamayı kapat (production'da)
 error_reporting(E_ALL);
@@ -35,7 +39,7 @@ function sendResponse($success, $message) {
 // POST kontrolü
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    sendResponse(false, 'Geçersiz istek metodu.');
+    sendResponse(false, 'Geçersiz istek metodu. Gelen metod: ' . $_SERVER['REQUEST_METHOD']);
 }
 
 // Form verilerini al ve temizle
@@ -73,7 +77,7 @@ if (!$kvkk) {
 
 // Email ayarları
 $toEmail = 'info@psikologyaseminerdal.com'; // Alıcı email
-$fromEmail = 'noreply@psikologyaseminerdal.com'; // Gönderen email (kendi domain'iniz)
+$fromEmail = 'psikologyaseminerdal@gmail.com'; // Gönderen email
 $fromName = 'Psikolog Yasemin Erdal Web Sitesi';
 
 // Email içeriği
@@ -132,12 +136,12 @@ $emailBody = "
 $mail = new PHPMailer(true);
 
 try {
-    // SMTP ayarları (kendi SMTP ayarlarınızı buraya yazın)
+    // SMTP ayarları
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com'; // SMTP sunucu adresi
+    $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'psikologyaseminerdal@gmail.com'; // SMTP kullanıcı adı
-    $mail->Password = 'cipnshsltdroijys'; // SMTP şifresi (Gmail için App Password)
+    $mail->Username = 'psikologyaseminerdal@gmail.com';
+    $mail->Password = 'cipnshsltdroijys';
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port = 587;
     $mail->CharSet = 'UTF-8';
@@ -150,13 +154,12 @@ try {
     $mail->isHTML(true);
     $mail->Subject = $emailSubject;
     $mail->Body = $emailBody;
-    $mail->AltBody = strip_tags($emailBody); // Plain text versiyonu
+    $mail->AltBody = strip_tags($emailBody);
 
     $mail->send();
     sendResponse(true, 'Randevu talebiniz başarıyla gönderildi. En kısa sürede sizinle iletişime geçeceğiz.');
 
 } catch (Exception $e) {
-    // Hata loglama (production'da)
     error_log("Email gönderme hatası: " . $mail->ErrorInfo);
     sendResponse(false, 'Email gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin veya telefon ile iletişime geçin.');
 }

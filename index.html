@@ -602,9 +602,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // AJAX isteği
     fetch('ajax.php', {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
     })
-    .then(response => response.json())
+    .then(response => {
+      // Önce response durumunu kontrol et
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
     .then(data => {
       // Butonu tekrar aktif et
       submitBtn.disabled = false;
@@ -636,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       formMesaj.classList.remove('d-none');
       formMesaj.className = 'alert alert-danger';
-      formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Bir hata oluştu. Lütfen tekrar deneyin.';
+      formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Bir hata oluştu: ' + error.message + '. Lütfen tekrar deneyin.';
       
       console.error('Hata:', error);
     });

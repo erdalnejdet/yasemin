@@ -1,0 +1,20 @@
+# POST metodunu etkinleştir
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|DELETE|TRACK) [NC]
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# PHP dosyalarına POST erişimine izin ver
+<Files "ajax.php">
+    <Limit GET POST>
+        Require all granted
+    </Limit>
+</Files>
+
+# CORS headers (gerekirse)
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, X-Requested-With"
+</IfModule>
