@@ -1,189 +1,276 @@
 <?php
-// CORS ayarları - EN ÜSTTE olmalı
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS, GET');
-header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
-// OPTIONS preflight request'i için hemen yanıt ver
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
+// Allow from any origin
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    // Burada, güvenli domainlerin bir beyaz listesini kontrol etmek isteyebilirsiniz
+    // Ancak, şu an için herhangi bir domain'den erişime izin vermek için aşağıdaki satırı kullanacağız
+    header("Access-Control-Allow-Origin: *");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400');    // 1 gün boyunca önbelleğe al
 }
 
-// Hata raporlamayı aç
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Ekrana basma, JSON bozmasın
-
-// Fatal error yakalayıcı
-register_shutdown_function(function() {
-    $error = error_get_last();
-    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
-            'success' => false,
-            'message' => 'Kritik Hata: ' . $error['message'] . ' dosya: ' . $error['file'] . ' satir: ' . $error['line']
-        ], JSON_UNESCAPED_UNICODE);
+// OPTIONS isteklerinde Access-Control başlıklarını gönder
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
+        header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     }
-});
 
-// Normal hata yakalayıcı
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    if (!(error_reporting() & $errno)) {
-        return;
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
     }
-    http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'success' => false,
-        'message' => 'PHP Hatası: ' . $errstr . ' dosya: ' . $errfile . ' satir: ' . $errline
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-});
-
-// PHPMailer'ı dahil et
-require_once 'PHPMailer/PHPMailer.php';
-require_once 'PHPMailer/SMTP.php';
-require_once 'PHPMailer/Exception.php';
+}
+$allowed_domains = array("https://psikologyaseminerdal.com/");
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_domains)) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400');    // 1 gün boyunca önbelleğe al
+}
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Yanıt fonksiyonu
-function sendResponse($success, $message) {
-    echo json_encode([
-        'success' => $success,
-        'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
+require 'PHPMailer/Exception.php';
+require 'PHPMailer/PHPMailer.php';
+require 'PHPMailer/SMTP.php';
+require 'PHPMailer/OAuth.php';
 
-// POST kontrolü
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    sendResponse(false, 'Geçersiz istek metodu. Gelen metod: ' . $_SERVER['REQUEST_METHOD']);
-}
 
-// Form verilerini al ve temizle
-$adsoyad = isset($_POST['adsoyad']) ? trim($_POST['adsoyad']) : '';
-$telefon = isset($_POST['telefon']) ? trim($_POST['telefon']) : '';
-$konu = isset($_POST['konu']) ? trim($_POST['konu']) : '';
-$mesaj = isset($_POST['mesaj']) ? trim($_POST['mesaj']) : '';
-$kvkk = isset($_POST['kvkk']) ? true : false;
+//    $mail->isSMTP();
+//     $mail->Host = 'smtp.gmail.com';
+//     $mail->SMTPAuth = true;
+//     $mail->Username = 'psikologyaseminerdal@gmail.com';
+//     $mail->Password = 'cipnshsltdroijys';
+//     $mail->SMTPSecure = 'tls';
+//     $mail->Port = 587;
+//     $mail->CharSet = 'UTF-8';
 
-// Validasyon
-if (empty($adsoyad)) {
-    sendResponse(false, 'Ad Soyad alanı zorunludur.');
-}
 
-if (empty($telefon)) {
-    sendResponse(false, 'Telefon numarası zorunludur.');
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-// Telefon formatı kontrolü (basit)
-if (!preg_match('/^[0-9\s\+\-\(\)]{10,15}$/', $telefon)) {
-    sendResponse(false, 'Geçerli bir telefon numarası giriniz.');
-}
-
-if (empty($konu)) {
-    sendResponse(false, 'Lütfen bir konu seçiniz.');
-}
-
-if (empty($mesaj)) {
-    sendResponse(false, 'Mesaj alanı zorunludur.');
-}
-
-if (!$kvkk) {
-    sendResponse(false, 'Gizlilik politikasını kabul etmelisiniz.');
-}
-
-// Email ayarları
-$toEmail = 'info@psikologyaseminerdal.com'; // Alıcı email
-$fromEmail = 'psikologyaseminerdal@gmail.com'; // Gönderen email
-$fromName = 'Psikolog Yasemin Erdal Web Sitesi';
-
-// Email içeriği
-$emailSubject = 'Yeni Randevu Talebi: ' . $konu;
-$emailBody = "
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #3A6B58; color: white; padding: 20px; text-align: center; }
-        .content { background-color: #f9f9f9; padding: 20px; }
-        .field { margin-bottom: 15px; }
-        .label { font-weight: bold; color: #3A6B58; }
-        .value { margin-top: 5px; }
-        .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h2>Yeni Randevu Talebi</h2>
-        </div>
-        <div class='content'>
-            <div class='field'>
-                <div class='label'>Ad Soyad:</div>
-                <div class='value'>" . htmlspecialchars($adsoyad) . "</div>
-            </div>
-            <div class='field'>
-                <div class='label'>Telefon:</div>
-                <div class='value'>" . htmlspecialchars($telefon) . "</div>
-            </div>
-            <div class='field'>
-                <div class='label'>Konu:</div>
-                <div class='value'>" . htmlspecialchars($konu) . "</div>
-            </div>
-            <div class='field'>
-                <div class='label'>Mesaj:</div>
-                <div class='value'>" . nl2br(htmlspecialchars($mesaj)) . "</div>
-            </div>
-            <div class='field'>
-                <div class='label'>KVKK Onayı:</div>
-                <div class='value'>Kabul Edildi</div>
-            </div>
-        </div>
-        <div class='footer'>
-            <p>Bu email psikologyaseminerdal.com web sitesinden gönderilmiştir.</p>
-            <p>Tarih: " . date('d.m.Y H:i') . "</p>
-        </div>
-    </div>
-</body>
-</html>
-";
-
-// PHPMailer ile email gönder
-$mail = new PHPMailer(true);
-
-try {
-    // SMTP ayarları
+    $mail = new PHPMailer;
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
+    $mail->SMTPDebug = 2;
+    $mail->Host = 'psikologyaseminerdal@gmail.com';
+    $mail->Port = 587;
+    $mail->SMTPOptions = array(
+        'ssl' => array(
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        )
+    );
+    $mail->SMTPSecure = 'tls';
     $mail->SMTPAuth = true;
+    $mail->CharSet = 'UTF-8';
     $mail->Username = 'psikologyaseminerdal@gmail.com';
     $mail->Password = 'cipnshsltdroijys';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->CharSet = 'UTF-8';
-
-    // Gönderen ve alıcı
-    $mail->setFrom($fromEmail, $fromName);
-    $mail->addAddress($toEmail);
-    
-    // İçerik
+    $mail->setFrom('psikologyaseminerdal@gmail.com', 'Psikolog Yasemin Erdal');
+    $mail->addAddress('psikologyaseminerdal@gmail.com', 'Psikolog Yasemin Erdal');
+    $mail->Subject = 'Formu  Dolduruldu' .  date("d/m/Y H:i");
     $mail->isHTML(true);
-    $mail->Subject = $emailSubject;
-    $mail->Body = $emailBody;
-    $mail->AltBody = strip_tags($emailBody);
+    $mail->MsgHTML('
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <style type="text/css">
+    /* FONTS */
+    @media screen {
+        @font-face {
+            font-family: \'Lato\';
+            font-style: normal;
+            font-weight: 400;
+            src: local(\'Lato Regular\'), local(\'Lato-Regular\'), url(https://fonts.gstatic.com/s/lato/v11/qIIYRU-oROkIk8vfvxw6QvesZW2xOQ-xsNqO47m55DA.woff) format(\'woff\');
+        }
 
-    $mail->send();
-    sendResponse(true, 'Randevu talebiniz başarıyla gönderildi. En kısa sürede sizinle iletişime geçeceğiz.');
+        @font-face {
+            font-family: \'Lato\';
+            font-style: normal;
+            font-weight: 700;
+            src: local(\'Lato Bold\'), local(\'Lato-Bold\'), url(https://fonts.gstatic.com/s/lato/v11/qdgUG4U09HnJwhYI-uK18wLUuEpTyoUstqEm5AMlJo4.woff) format(\'woff\');
+        }
 
-} catch (Exception $e) {
-    error_log("Email gönderme hatası: " . $mail->ErrorInfo);
-    sendResponse(false, 'Email gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin veya telefon ile iletişime geçin.');
+        @font-face {
+            font-family: \'Lato\';
+            font-style: italic;
+            font-weight: 400;
+            src: local(\'Lato Italic\'), local(\'Lato-Italic\'), url(https://fonts.gstatic.com/s/lato/v11/RYyZNoeFgb0l7W3Vu1aSWOvvDin1pK8aKteLpeZ5c0A.woff) format(\'woff\');
+        }
+
+        @font-face {
+            font-family: \'Lato\';
+            font-style: italic;
+            font-weight: 700;
+            src: local(\'Lato Bold Italic\'), local(\'Lato-BoldItalic\'), url(https://fonts.gstatic.com/s/lato/v11/HkF_qI1x_noxlxhrhMQYELO3LdcAZYWl9Si6vvxL-qU.woff) format(\'woff\');
+        }
+    }
+
+    /* CLIENT-SPECIFIC STYLES */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; }
+
+    /* RESET STYLES */
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    table { border-collapse: collapse !important; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+
+    /* iOS BLUE LINKS */
+    a[x-apple-data-detectors] {
+        color: inherit !important;
+        text-decoration: none !important;
+        font-size: inherit !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+    }
+
+    /* MOBILE STYLES */
+    @media screen and (max-width:600px){
+        h1 {
+        h1 {
+            font-size: 32px !important;
+            line-height: 32px !important;
+        }
+    }
+
+    /* ANDROID CENTER FIX */
+    div[style*="margin: 16px 0;"] { margin: 0 !important; }
+    </style>
+    </head>
+    <body style="background-color: #318dde; margin: 0 !important; padding: 0 !important;">
+
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <!-- LOGO -->
+    <tr>
+    <td bgcolor="#318dde" align="center">
+        <!--[if (gte mso 9)|(IE)]>
+        <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
+            <tr>
+                <td align="center" valign="top" width="600">
+        <![endif]-->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;" >
+  
+        </table>
+        <!--[if (gte mso 9)|(IE)]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
+    </td>
+    </tr>
+    <!-- HERO -->
+    <tr>
+    <td bgcolor="#318dde" align="center" style="padding: 0px 0px 0px 0px;">
+        <!--[if (gte mso 9)|(IE)]>
+        <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
+            <tr>
+                <td align="center" valign="top" width="600">
+        <![endif]-->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;" >
+            <tr>
+                <td bgcolor="#ffffff" align="center" valign="top" style="padding: 40px 20px 20px 20px; border-radius: 4px 4px 0px 0px; color: #111111; font-family: \'Lato\', Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 400; letter-spacing: 4px; line-height: 48px;">
+                    <h1 style="font-size: 48px; font-weight: 400; margin: 0;">Bildiriminiz Var!</h1>
+                </td>
+            </tr>
+        </table>
+        <!--[if (gte mso 9)|(IE)]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
+    </td>
+    </tr>
+    <!-- COPY BLOCK -->
+    <tr>
+    <td bgcolor="#f4f4f4" align="center" style="padding: 0px 10px 0px 10px;">
+        <!--[if (gte mso 9)|(IE)]>
+        <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
+            <tr>
+                <td align="center" valign="top" width="600">
+        <![endif]-->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;" >
+            <!-- COPY -->
+
+            <!-- Confirm Butonu
+            <tr>
+                <td bgcolor="#ffffff" align="left">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td bgcolor="#ffffff" align="center" style="padding: 20px 30px 60px 30px;">
+                                <table border="0" cellspacing="0" cellpadding="0">
+                                    <tr>
+                                        <td align="center" style="border-radius: 3px;" bgcolor="#FFA73B"><a href="https://litmus.com" target="_blank" style="font-size: 20px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; color: #ffffff; text-decoration: none; padding: 15px 25px; border-radius: 2px; border: 1px solid #FFA73B; display: inline-block;">Confirm Account</a></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+             -->
+            <!-- COPY -->
+            <tr>
+                <td bgcolor="#ffffff" align="left" style="padding: 0px 30px 0px 30px; color: #666666; font-family: \'Lato\', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;" >
+                    <p style="margin: 0;">
+                        <b>İsim Soyisim </b> <br>
+                        ' . $_POST['adsoyad'] . ' <br><br>
+                        <b>Telefon Numarası</b> <br>
+                        ' . $_POST['telefon'] . ' <br><br>
+                        <b>İşlem    </b> <br>
+                        ' . $_POST['konu'] . ' <br><br>
+                        <b>mesaj    </b> <br>
+                        ' . $_POST['mesaj'] . ' <br><br>
+                        <b>kvkk    </b> <br>
+                        ' . $_POST['kvkk'] . ' <br><br>
+                    </p>
+                </td>
+            </tr>
+
+            <!--[if (gte mso 9)|(IE)]>
+            </td>
+            </tr>
+            </table>
+            <![endif]-->
+            </td>
+            </tr>
+            <!-- SUPPORT CALLOUT -->
+            <tr>
+                <td bgcolor="#f4f4f4" align="center" style="padding: 15px 10px 0px 10px;">
+                    <!--[if (gte mso 9)|(IE)]>
+                    <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
+                        <tr>
+                            <td align="center" valign="top" width="600">
+                    <![endif]-->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;" >
+
+                    </table>
+                    <!--[if (gte mso 9)|(IE)]>
+                    </td>
+                    </tr>
+                    </table>
+                    <![endif]-->
+                </td>
+            </tr>
+
+            <!--[if (gte mso 9)|(IE)]>
+            </td>
+            </tr>
+            </table>
+            <![endif]-->
+            </td>
+            </tr>
+        </table>
+
+    </body>
+        </html>
+    ');
+    if (!$mail->send()) {
+        echo "Mailer Error: " . $mail->ErrorInfo;
+    } else {
+        echo "Message sent!";
+    }
 }
-?>
