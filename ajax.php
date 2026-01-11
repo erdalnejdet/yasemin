@@ -35,16 +35,6 @@ require 'PHPMailer/SMTP.php';
 require 'PHPMailer/OAuth.php';
 
 
-//    $mail->isSMTP();
-//     $mail->Host = 'smtp.gmail.com';
-//     $mail->SMTPAuth = true;
-//     $mail->Username = 'psikologyaseminerdal@gmail.com';
-//     $mail->Password = 'cipnshsltdroijys';
-//     $mail->SMTPSecure = 'tls';
-//     $mail->Port = 587;
-//     $mail->CharSet = 'UTF-8';
-
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $mail = new PHPMailer;
@@ -63,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mail->SMTPAuth = true;
     $mail->CharSet = 'UTF-8';
     $mail->Username = 'psikologyaseminerdal@gmail.com';
-    $mail->Password = 'cipnshsltdroijys';
+    $mail->Password = 'sugdadyhjnagyaea';
     $mail->setFrom('psikologyaseminerdal@gmail.com', 'Psikolog Yasemin Erdal');
     $mail->addAddress('psikologyaseminerdal@gmail.com', 'Psikolog Yasemin Erdal');
     $mail->Subject = 'Formu  Dolduruldu' .  date("d/m/Y H:i");
