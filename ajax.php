@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mail = new PHPMailer;
     $mail->isSMTP();
     $mail->SMTPDebug = 2;
-    $mail->Host = 'psikologyaseminerdal@gmail.com';
+    $mail->Host = 'smtp.gmail.com';
     $mail->Port = 465;
     $mail->SMTPOptions = array(
         'ssl' => array(
