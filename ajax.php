@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mail->isSMTP();
     $mail->SMTPDebug = 2;
     $mail->Host = 'psikologyaseminerdal@gmail.com';
-    $mail->Port = 587;
+    $mail->Port = 465;
     $mail->SMTPOptions = array(
         'ssl' => array(
             'verify_peer' => false,
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'allow_self_signed' => true
         )
     );
-    $mail->SMTPSecure = 'tls';
+    $mail->SMTPSecure = 'ssl';
     $mail->SMTPAuth = true;
     $mail->CharSet = 'UTF-8';
     $mail->Username = 'psikologyaseminerdal@gmail.com';
