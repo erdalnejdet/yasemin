@@ -703,12 +703,17 @@
             'X-Requested-With': 'XMLHttpRequest'
           }
         })
-          .then(response => {
+          .then(async response => {
+            const isJson = response.headers.get('content-type')?.includes('application/json');
+            const data = isJson ? await response.json() : null;
+
             // Önce response durumunu kontrol et
             if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+              // Eğer sunucudan gelen JSON formatında bir hata mesajı varsa onu kullan
+              const errorMessage = (data && data.message) || `Sunucu hatası! Durum kodu: ${response.status}`;
+              throw new Error(errorMessage);
             }
-            return response.json();
+            return data;
           })
           .then(data => {
             // Butonu tekrar aktif et
@@ -741,7 +746,7 @@
 
             formMesaj.classList.remove('d-none');
             formMesaj.className = 'alert alert-danger';
-            formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Bir hata oluştu: ' + error.message + '. Lütfen tekrar deneyin.';
+            formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + error.message;
 
             console.error('Hata:', error);
           });

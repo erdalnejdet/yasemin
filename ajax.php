@@ -11,13 +11,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Debug için (geçici olarak)
-// error_reporting(E_ALL);
-// ini_set('display_errors', 1);
-
-// Hata raporlamayı kapat (production'da)
+// Hata raporlamayı aç
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 0); // Ekrana basma, JSON bozmasın
+
+// Fatal error yakalayıcı
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Kritik Hata: ' . $error['message'] . ' dosya: ' . $error['file'] . ' satir: ' . $error['line']
+        ], JSON_UNESCAPED_UNICODE);
+    }
+});
+
+// Normal hata yakalayıcı
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) {
+        return;
+    }
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'message' => 'PHP Hatası: ' . $errstr . ' dosya: ' . $errfile . ' satir: ' . $errline
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+});
 
 // PHPMailer'ı dahil et
 require_once 'PHPMailer/PHPMailer.php';
