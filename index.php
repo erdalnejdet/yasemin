@@ -703,18 +703,7 @@
             'X-Requested-With': 'XMLHttpRequest'
           }
         })
-          .then(async response => {
-            const isJson = response.headers.get('content-type')?.includes('application/json');
-            const data = isJson ? await response.json() : null;
-
-            // Önce response durumunu kontrol et
-            if (!response.ok) {
-              // Eğer sunucudan gelen JSON formatında bir hata mesajı varsa onu kullan
-              const errorMessage = (data && data.message) || `Sunucu hatası! Durum kodu: ${response.status}`;
-              throw new Error(errorMessage);
-            }
-            return data;
-          })
+          .then(response => response.text())
           .then(data => {
             // Butonu tekrar aktif et
             submitBtn.disabled = false;
@@ -724,13 +713,13 @@
             // Mesajı göster
             formMesaj.classList.remove('d-none');
 
-            if (data.success) {
+            if (data.trim() === 'Message sent!' || data.includes('Message sent!')) {
               formMesaj.className = 'alert alert-success';
-              formMesaj.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + data.message;
+              formMesaj.innerHTML = '<i class="fas fa-check-circle me-2"></i>Randevu talebiniz başarıyla gönderildi.';
               form.reset(); // Formu temizle
             } else {
               formMesaj.className = 'alert alert-danger';
-              formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + data.message;
+              formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + data;
             }
 
             // Mesajı 5 saniye sonra kaydır
@@ -746,7 +735,7 @@
 
             formMesaj.classList.remove('d-none');
             formMesaj.className = 'alert alert-danger';
-            formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + error.message;
+            formMesaj.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Bir hata oluştu: ' + error.message;
 
             console.error('Hata:', error);
           });
