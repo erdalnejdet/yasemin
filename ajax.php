@@ -165,7 +165,7 @@ try {
     $mail->SMTPAuth = true;
     $mail->Username = 'psikologyaseminerdal@gmail.com';
     $mail->Password = 'cipnshsltdroijys';
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->SMTPSecure = 'tls';
     $mail->Port = 587;
     $mail->CharSet = 'UTF-8';
 
