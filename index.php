@@ -209,6 +209,32 @@
       font-style: italic;
     }
 
+    /* Seans Ücretleri */
+    .pricing-card {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 38px 30px;
+      background: #fff;
+      border: 1px solid rgba(58, 107, 88, 0.12);
+      border-top: 4px solid var(--secondary-green);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .pricing-amount {
+      color: var(--primary-green);
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-weight: 700;
+      margin: 12px 0;
+    }
+
+    .pricing-note {
+      color: #6c757d;
+      font-size: 0.95rem;
+      margin-bottom: 22px;
+    }
+
     /* Contact Form */
     .bg-light-green {
       background-color: var(--light-green);
@@ -310,6 +336,7 @@
           <li class="nav-item"><a class="nav-link" href="#hakkimda">Hakkımda</a></li>
           <li class="nav-item"><a class="nav-link" href="#uzmanliklar">Uzmanlıklar</a></li>
           <li class="nav-item"><a class="nav-link" href="#egitim">Eğitim</a></li>
+          <li class="nav-item"><a class="nav-link" href="#ucretler">Seans Ücretleri</a></li>
           <li class="nav-item"><a class="nav-link" href="#iletisim">İletişim</a></li>
           <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
             <a class="btn btn-nav-appointment" href="#iletisim">
@@ -381,6 +408,21 @@
 
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ucretler" class="bg-light-green">
+    <div class="container text-center">
+      <h2 class="section-title">Seans Ücretleri</h2>
+      <div class="pricing-card">
+        <p class="mb-1 text-muted">Bireysel terapi seans ücretleri</p>
+        <div class="pricing-amount">1.500 TL – 3.000 TL</div>
+        <p class="pricing-note">
+          Seans ücretleri, görüşmenin türüne ve kapsamına göre değişiklik gösterebilir.
+          Güncel ücret bilgisi ve randevu oluşturmak için benimle iletişime geçebilirsiniz.
+        </p>
+        <a href="#iletisim" class="btn btn-green">Ücret ve Randevu Bilgisi Al</a>
       </div>
     </div>
   </section>
